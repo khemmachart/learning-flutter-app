@@ -134,9 +134,17 @@ class Movie {
   });
 
   factory Movie.fromJson(Map<String, dynamic> json, Map<int, String> genreMap) {
-    List<String> genreNames = (json['genre_ids'] as List<dynamic>)
-        .map((id) => genreMap[id] ?? 'Unknown')
-        .toList();
+    List<String> genreNames = (json['genre_ids'] as List<dynamic>?)
+        ?.map((id) => genreMap[id] ?? 'Unknown')
+        .toList() ?? [];
+
+    List<Cast> castList = [];
+    if (json['credits'] != null && json['credits']['cast'] != null) {
+      castList = (json['credits']['cast'] as List)
+          .map((castJson) => Cast.fromJson(castJson))
+          .take(10) // Limit to top 10 cast members
+          .toList();
+    }
 
     return Movie(
       id: json['id'],
@@ -147,8 +155,8 @@ class Movie {
       posterPath: json['poster_path'] != null ? 'https://image.tmdb.org/t/p/w200${json['poster_path']}' : null,
       backdropPath: json['backdrop_path'] != null ? 'https://image.tmdb.org/t/p/original${json['backdrop_path']}' : null,
       releaseDate: json['release_date'],
-      runtime: null,
-      cast: [],
+      runtime: json['runtime'],
+      cast: castList,
     );
   }
 }
@@ -159,6 +167,14 @@ class Cast {
   final String? profilePath;
 
   Cast({required this.name, this.character, this.profilePath});
+
+  factory Cast.fromJson(Map<String, dynamic> json) {
+    return Cast(
+      name: json['name'],
+      character: json['character'],
+      profilePath: json['profile_path'] != null ? 'https://image.tmdb.org/t/p/w185${json['profile_path']}' : null,
+    );
+  }
 }
 
 // Mock movie data provider
@@ -184,44 +200,65 @@ final moviesProvider = Provider<List<Movie>>((ref) {
   });
 });
 
-class MovieDetailPage extends StatelessWidget {
+class MovieDetailPage extends ConsumerStatefulWidget {
   final Movie movie;
 
   const MovieDetailPage({Key? key, required this.movie}) : super(key: key);
 
   @override
+  _MovieDetailPageState createState() => _MovieDetailPageState();
+}
+
+class _MovieDetailPageState extends ConsumerState<MovieDetailPage> {
+  late Future<Movie> _movieDetailsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _movieDetailsFuture = ref.read(movieListViewModelProvider.notifier).fetchMovieDetails(widget.movie.id);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          _buildSliverAppBar(),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Hero(
-                    tag: 'movie-info-${movie.id}',
-                    child: Material(
-                      color: Colors.transparent,
-                      child: _buildMovieInfo(),
+      body: FutureBuilder<Movie>(
+        future: _movieDetailsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          } else if (snapshot.hasData) {
+            final movie = snapshot.data!;
+            return CustomScrollView(
+              slivers: [
+                _buildSliverAppBar(movie),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildMovieInfo(movie),
+                        const SizedBox(height: 16),
+                        _buildOverview(movie),
+                        const SizedBox(height: 16),
+                        _buildCast(movie),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  _buildOverview(),
-                  const SizedBox(height: 16),
-                  _buildCast(),
-                ],
-              ),
-            ),
-          ),
-        ],
+                ),
+              ],
+            );
+          } else {
+            return const Center(child: Text('No data available'));
+          }
+        },
       ),
     );
   }
 
-  Widget _buildSliverAppBar() {
+  Widget _buildSliverAppBar(Movie movie) {
     return SliverAppBar(
       expandedHeight: 300,
       pinned: true,
@@ -237,31 +274,32 @@ class MovieDetailPage extends StatelessWidget {
           ),
         ),
         background: Hero(
-          tag: movie.id >= 1000 ? 'top-rated-movie-${movie.id}' : 'movie-poster-${movie.id}',
-          child: movie.backdropPath != null
-              ? Image.network(
-                  movie.backdropPath!,
-                  fit: BoxFit.cover,
-                )
-              : Container(color: Colors.grey),
+          tag: 'movie-backdrop-${movie.id}',
+          child: Image.network(
+            movie.backdropPath ?? '',
+            fit: BoxFit.cover,
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildMovieInfo() {
+  Widget _buildMovieInfo(Movie movie) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (movie.posterPath != null)
-          Image.network(movie.posterPath!, height: 150)
-        else
-          Container(
-            height: 150,
-            width: 100,
-            color: Colors.grey,
-            child: const Icon(Icons.movie, color: Colors.white),
+        Hero(
+          tag: 'movie-poster-${movie.id}',
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              movie.posterPath ?? '',
+              height: 180,
+              width: 120,
+              fit: BoxFit.cover,
+            ),
           ),
+        ),
         const SizedBox(width: 16),
         Expanded(
           child: Column(
@@ -273,7 +311,7 @@ class MovieDetailPage extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text('Release Date: ${movie.releaseDate}'),
-              if (movie.runtime != null) Text('Runtime: ${movie.runtime} minutes'),
+              Text('Runtime: ${movie.runtime} minutes'),
               Text('Genres: ${movie.genres.join(", ")}'),
               const SizedBox(height: 8),
               Row(
@@ -293,7 +331,7 @@ class MovieDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildOverview() {
+  Widget _buildOverview(Movie movie) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -307,7 +345,7 @@ class MovieDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildCast() {
+  Widget _buildCast(Movie movie) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -317,29 +355,53 @@ class MovieDetailPage extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         SizedBox(
-          height: 160,
+          height: 130,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: movie.cast.length,
             itemBuilder: (context, index) {
               final cast = movie.cast[index];
               return Padding(
-                padding: const EdgeInsets.only(right: 16),
+                padding: const EdgeInsets.only(right: 12),
                 child: Column(
                   children: [
                     CircleAvatar(
-                      radius: 40,
+                      radius: 30,
                       backgroundImage: cast.profilePath != null
                           ? NetworkImage(cast.profilePath!)
                           : null,
                       child: cast.profilePath == null
-                          ? const Icon(Icons.person)
+                          ? const Icon(Icons.person, size: 30)
                           : null,
                     ),
-                    const SizedBox(height: 8),
-                    Text(cast.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    SizedBox(
+                      width: 60,
+                      child: Text(
+                        cast.name,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                     if (cast.character != null)
-                      Text(cast.character!, style: TextStyle(color: Colors.grey[600])),
+                      SizedBox(
+                        width: 60,
+                        child: Text(
+                          cast.character!,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 10,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                   ],
                 ),
               );
@@ -427,6 +489,16 @@ class MovieApiService {
     final results = data['results'] as List<dynamic>;
     return results.map((movieData) => Movie.fromJson(movieData, _genreMap)).toList();
   }
+
+  Future<Movie> getMovieDetails(int movieId) async {
+    await _initGenres(); // Ensure genres are loaded
+    final data = await _networkClient.get('/movie/$movieId', queryParams: {
+      'language': 'en-US',
+      'append_to_response': 'credits',
+    });
+
+    return Movie.fromJson(data, _genreMap);
+  }
 }
 
 class MovieListViewModel extends StateNotifier<AsyncValue<List<Movie>>> {
@@ -504,6 +576,14 @@ class MovieListViewModel extends StateNotifier<AsyncValue<List<Movie>>> {
   }
 
   List<Movie> get topRatedMovies => _topRatedMovies;
+
+  Future<Movie> fetchMovieDetails(int movieId) async {
+    try {
+      return await _apiService.getMovieDetails(movieId);
+    } catch (e, stackTrace) {
+      throw AsyncError(e, stackTrace);
+    }
+  }
 }
 
 final movieApiServiceProvider = Provider<MovieApiService>((ref) => MovieApiService());
