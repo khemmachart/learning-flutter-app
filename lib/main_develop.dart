@@ -211,11 +211,33 @@ class MovieDetailPage extends ConsumerStatefulWidget {
 
 class _MovieDetailPageState extends ConsumerState<MovieDetailPage> {
   late Future<Movie> _movieDetailsFuture;
+  List<Review> _reviews = [];
+  int _currentReviewPage = 1;
+  bool _hasMoreReviews = true;
+  bool _isLoadingReviews = false;
 
   @override
   void initState() {
     super.initState();
     _movieDetailsFuture = ref.read(movieListViewModelProvider.notifier).fetchMovieDetails(widget.movie.id);
+    _loadReviews();
+  }
+
+  Future<void> _loadReviews() async {
+    if (!_hasMoreReviews || _isLoadingReviews) return;
+    setState(() => _isLoadingReviews = true);
+    try {
+      final newReviews = await ref.read(movieListViewModelProvider.notifier).fetchMovieReviews(widget.movie.id, page: _currentReviewPage);
+      setState(() {
+        _reviews.addAll(newReviews);
+        _currentReviewPage++;
+        _hasMoreReviews = newReviews.isNotEmpty;
+        _isLoadingReviews = false;
+      });
+    } catch (e) {
+      setState(() => _isLoadingReviews = false);
+      // Handle error
+    }
   }
 
   @override
@@ -235,15 +257,17 @@ class _MovieDetailPageState extends ConsumerState<MovieDetailPage> {
                 _buildSliverAppBar(movie),
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.all(24.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildMovieInfo(movie),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 32),
                         _buildOverview(movie),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 32),
                         _buildCast(movie),
+                        const SizedBox(height: 32),
+                        _buildReviews(),
                       ],
                     ),
                   ),
@@ -269,7 +293,17 @@ class _MovieDetailPageState extends ConsumerState<MovieDetailPage> {
             color: Colors.transparent,
             child: Text(
               movie.title,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                shadows: [
+                  Shadow(
+                    offset: Offset(0, 1),
+                    blurRadius: 3.0,
+                    color: Color.fromARGB(255, 0, 0, 0),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -285,47 +319,54 @@ class _MovieDetailPageState extends ConsumerState<MovieDetailPage> {
   }
 
   Widget _buildMovieInfo(Movie movie) {
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Hero(
-          tag: 'movie-poster-${movie.id}',
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.network(
-              movie.posterPath ?? '',
-              height: 180,
-              width: 120,
-              fit: BoxFit.cover,
-            ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                movie.title,
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Hero(
+              tag: 'movie-poster-${movie.id}',
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  movie.posterPath ?? '',
+                  height: 180,
+                  width: 120,
+                  fit: BoxFit.cover,
+                ),
               ),
-              const SizedBox(height: 8),
-              Text('Release Date: ${movie.releaseDate}'),
-              Text('Runtime: ${movie.runtime} minutes'),
-              Text('Genres: ${movie.genres.join(", ")}'),
-              const SizedBox(height: 8),
-              Row(
+            ),
+            const SizedBox(width: 24),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.star, color: Colors.amber),
-                  const SizedBox(width: 4),
                   Text(
-                    movie.voteAverage.toStringAsFixed(1),
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    movie.title,
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  Text('Release Date: ${movie.releaseDate}', style: TextStyle(fontSize: 16)),
+                  const SizedBox(height: 4),
+                  Text('Runtime: ${movie.runtime} minutes', style: TextStyle(fontSize: 16)),
+                  const SizedBox(height: 4),
+                  Text('Genres: ${movie.genres.join(", ")}', style: TextStyle(fontSize: 16)),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.star, color: Colors.amber, size: 24),
+                      const SizedBox(width: 8),
+                      Text(
+                        movie.voteAverage.toStringAsFixed(1),
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ],
     );
@@ -337,10 +378,13 @@ class _MovieDetailPageState extends ConsumerState<MovieDetailPage> {
       children: [
         const Text(
           'Overview',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 8),
-        Text(movie.overview),
+        const SizedBox(height: 16),
+        Text(
+          movie.overview,
+          style: TextStyle(fontSize: 16, height: 1.5),
+        ),
       ],
     );
   }
@@ -351,38 +395,38 @@ class _MovieDetailPageState extends ConsumerState<MovieDetailPage> {
       children: [
         const Text(
           'Cast',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 16),
         SizedBox(
-          height: 130,
+          height: 170,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: movie.cast.length,
             itemBuilder: (context, index) {
               final cast = movie.cast[index];
               return Padding(
-                padding: const EdgeInsets.only(right: 12),
+                padding: const EdgeInsets.only(right: 16),
                 child: Column(
                   children: [
                     CircleAvatar(
-                      radius: 30,
+                      radius: 40,
                       backgroundImage: cast.profilePath != null
                           ? NetworkImage(cast.profilePath!)
                           : null,
                       child: cast.profilePath == null
-                          ? const Icon(Icons.person, size: 30)
+                          ? const Icon(Icons.person, size: 40)
                           : null,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 8),
                     SizedBox(
-                      width: 60,
+                      width: 80,
                       child: Text(
                         cast.name,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 12,
+                          fontSize: 14,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -390,13 +434,13 @@ class _MovieDetailPageState extends ConsumerState<MovieDetailPage> {
                     ),
                     if (cast.character != null)
                       SizedBox(
-                        width: 60,
+                        width: 80,
                         child: Text(
                           cast.character!,
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: Colors.grey[600],
-                            fontSize: 10,
+                            fontSize: 12,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -410,6 +454,104 @@ class _MovieDetailPageState extends ConsumerState<MovieDetailPage> {
         ),
       ],
     );
+  }
+
+  Widget _buildReviews() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Reviews',
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 16),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: _reviews.length + 1,
+          itemBuilder: (context, index) {
+            if (index < _reviews.length) {
+              return _buildReviewCard(_reviews[index]);
+            } else {
+              return _buildLoadMoreReviewsButton();
+            }
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReviewCard(Review review) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 24),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  review.author,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+                if (review.rating != null) _buildRatingWidget(review.rating!),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              review.content,
+              style: const TextStyle(fontSize: 16, height: 1.5),
+              maxLines: 5,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Posted on ${_formatDate(review.createdAt)}',
+              style: TextStyle(color: Colors.grey[600], fontSize: 14),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRatingWidget(double rating) {
+    return Row(
+      children: [
+        const Icon(Icons.star, color: Colors.amber, size: 20),
+        const SizedBox(width: 4),
+        Text(
+          rating.toStringAsFixed(1),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLoadMoreReviewsButton() {
+    if (!_hasMoreReviews) return const SizedBox.shrink();
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16.0),
+        child: _isLoadingReviews
+            ? const CircularProgressIndicator()
+            : ElevatedButton(
+                onPressed: _loadReviews,
+                child: const Text('Load More Reviews', style: TextStyle(fontSize: 16)),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+              ),
+      ),
+    );
+  }
+
+  String _formatDate(String dateString) {
+    final date = DateTime.parse(dateString);
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 }
 
@@ -499,6 +641,16 @@ class MovieApiService {
 
     return Movie.fromJson(data, _genreMap);
   }
+
+  Future<List<Review>> getMovieReviews(int movieId, {int page = 1}) async {
+    final data = await _networkClient.get('/movie/$movieId/reviews', queryParams: {
+      'language': 'en-US',
+      'page': page.toString(),
+    });
+
+    final results = data['results'] as List<dynamic>;
+    return results.map((reviewData) => Review.fromJson(reviewData)).toList();
+  }
 }
 
 class MovieListViewModel extends StateNotifier<AsyncValue<List<Movie>>> {
@@ -580,6 +732,14 @@ class MovieListViewModel extends StateNotifier<AsyncValue<List<Movie>>> {
   Future<Movie> fetchMovieDetails(int movieId) async {
     try {
       return await _apiService.getMovieDetails(movieId);
+    } catch (e, stackTrace) {
+      throw AsyncError(e, stackTrace);
+    }
+  }
+
+  Future<List<Review>> fetchMovieReviews(int movieId, {int page = 1}) async {
+    try {
+      return await _apiService.getMovieReviews(movieId, page: page);
     } catch (e, stackTrace) {
       throw AsyncError(e, stackTrace);
     }
@@ -971,6 +1131,30 @@ class DisplayModeTitle extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// Add this class at the end of the file
+class Review {
+  final String author;
+  final String content;
+  final String createdAt;
+  final double? rating;
+
+  Review({
+    required this.author,
+    required this.content,
+    required this.createdAt,
+    this.rating,
+  });
+
+  factory Review.fromJson(Map<String, dynamic> json) {
+    return Review(
+      author: json['author'],
+      content: json['content'],
+      createdAt: json['created_at'],
+      rating: json['author_details']['rating']?.toDouble(),
     );
   }
 }
