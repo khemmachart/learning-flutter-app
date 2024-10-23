@@ -25,7 +25,7 @@ class DisplayModeTitle extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
-          _buildDisplayModeToggle(context, ref, movieState.currentMode),
+          _buildDisplayModeToggle(context, ref, movieState.state.currentMode),
         ],
       ),
     );

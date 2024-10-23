@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_flutter_app/modules/movie/movie_list/page/movie_list_page.dart';
 import 'package:learning_flutter_app/core/utils/logger.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:learning_flutter_app/core/di/dependency_injection.dart';
 
 Future<void> main() async {
   try {
     await dotenv.load(fileName: ".env");
     logger.i('Starting the app');
+    setupDependencies();
   } catch (e) {
     print("Error loading .env file: $e");
     // You might want to handle this error more gracefully

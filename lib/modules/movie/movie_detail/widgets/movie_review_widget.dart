@@ -76,12 +76,12 @@ class MovieReviews extends ConsumerWidget {
     return Consumer(
       builder: (context, ref, child) {
         final movieDetailState = ref.watch(movieDetailViewModelProvider(movieId));
-        if (!movieDetailState.hasMoreReviews) return const SizedBox.shrink();
+        if (!movieDetailState.state.hasMoreReviews) return const SizedBox.shrink();
 
         return Center(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 16.0),
-            child: movieDetailState.isLoadingReviews
+            child: movieDetailState.state.isLoadingReviews
                 ? const CircularProgressIndicator()
                 : ElevatedButton(
                     onPressed: () {

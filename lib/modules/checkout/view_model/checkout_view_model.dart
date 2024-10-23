@@ -1,21 +1,17 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_flutter_app/core/models/movie.dart';
 import 'package:learning_flutter_app/core/services/checkout_service.dart';
 import 'package:learning_flutter_app/modules/checkout/state/checkout_state.dart';
+import 'package:learning_flutter_app/core/base/base_view_model.dart';
 
-class CheckoutViewModel extends StateNotifier<CheckoutState> {
+class CheckoutViewModel extends BaseViewModel<CheckoutState> {
   final CheckoutService _service;
 
   CheckoutViewModel(this._service) : super(CheckoutState());
 
   Future<void> processCheckout(Movie movie, DateTime date, String time, int seats) async {
-    state = state.copyWith(isLoading: true, errorMessage: null);
-
-    try {
+    await runSafe(() async {
       final success = await _service.processCheckout(movie, date, time, seats);
-      state = state.copyWith(isLoading: false, isSuccess: success);
-    } catch (e) {
-      state = state.copyWith(isLoading: false, errorMessage: e.toString());
-    }
+      setState(state.copyWith(isSuccess: success));
+    });
   }
 }

@@ -21,18 +21,18 @@ class MovieDetailPage extends ConsumerWidget {
     return Scaffold(
       body: movieDetailState.isLoading
           ? const Center(child: CircularProgressIndicator())
-          : movieDetailState.movie == null
+          : movieDetailState.state.movie == null
               ? const Center(child: Text('Error loading movie details'))
               : Stack(
                   children: [
-                    _buildMovieDetails(context, movieDetailState.movie!, movieDetailState.reviews),
+                    _buildMovieDetails(context, movieDetailState.state.movie!, movieDetailState.state.reviews),
                     Positioned(
                       left: 0,
                       right: 0,
                       bottom: 0,
                       child: SafeArea(
                         top: false,
-                        child: _buildBookButton(context, movieDetailState.movie!),
+                        child: _buildBookButton(context, movieDetailState.state.movie!),
                       ),
                     ),
                   ],

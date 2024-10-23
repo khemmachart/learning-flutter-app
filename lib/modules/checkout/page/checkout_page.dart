@@ -60,7 +60,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                 ),
                 const SizedBox(height: 32),
                 CheckoutButton(
-                  checkoutState: checkoutState,
+                  checkoutState: checkoutState.state,
                   isEnabled: selectedDate != null && selectedTime != null,
                   onPressed: () => _processCheckout(),
                 ),
@@ -92,7 +92,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     
     if (mounted) {
       final checkoutState = ref.read(checkoutViewModelProvider);
-      if (checkoutState.isSuccess) {
+      if (checkoutState.state.isSuccess) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (context) => PaymentSuccessPage(

@@ -1,10 +1,10 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_flutter_app/core/models/movie.dart';
 import 'package:learning_flutter_app/core/models/review.dart';
 import 'package:learning_flutter_app/core/services/movie_service.dart';
 import 'package:learning_flutter_app/modules/movie/movie_list/state/movie_list_state.dart';
+import 'package:learning_flutter_app/core/base/base_view_model.dart';
 
-class MovieListViewModel extends StateNotifier<MovieListState> {
+class MovieListViewModel extends BaseViewModel<MovieListState> {
   final MovieService _apiService;
 
   MovieListViewModel(this._apiService) : super(const MovieListState()) {
@@ -12,12 +12,12 @@ class MovieListViewModel extends StateNotifier<MovieListState> {
   }
 
   Future<void> fetchMovies({bool loadMore = false, MovieDisplayMode? mode}) async {
-    if (state.isLoading) return;
-    state = state.copyWith(isLoading: true);
+    if (isLoading) return;
+    setLoading(true);
 
-    try {
+    await runSafe(() async {
       if (mode != null && mode != state.currentMode) {
-        state = state.copyWith(currentMode: mode);
+        setState(state.copyWith(currentMode: mode));
       }
 
       if (state.currentMode == MovieDisplayMode.popular) {
@@ -29,12 +29,7 @@ class MovieListViewModel extends StateNotifier<MovieListState> {
           await fetchNowPlayingMovies(loadMore: loadMore);
         }
       }
-
-      state = state.copyWith(isLoading: false);
-    } catch (e) {
-      state = state.copyWith(isLoading: false);
-      // Handle error
-    }
+    });
   }
 
   Future<void> fetchPopularMovies({bool loadMore = false}) async {
@@ -43,10 +38,10 @@ class MovieListViewModel extends StateNotifier<MovieListState> {
     
     final updatedMovies = loadMore ? [...state.popularMovies, ...movies] : movies;
 
-    state = state.copyWith(
+    setState(state.copyWith(
       popularMovies: updatedMovies,
       popularCurrentPage: currentPage,
-    );
+    ));
   }
 
   Future<void> fetchNowPlayingMovies({bool loadMore = false}) async {
@@ -55,10 +50,10 @@ class MovieListViewModel extends StateNotifier<MovieListState> {
     
     final updatedMovies = loadMore ? [...state.nowPlayingMovies, ...movies] : movies;
 
-    state = state.copyWith(
+    setState(state.copyWith(
       nowPlayingMovies: updatedMovies,
       nowPlayingCurrentPage: currentPage,
-    );
+    ));
   }
 
   Future<void> loadMore() async {
@@ -67,7 +62,7 @@ class MovieListViewModel extends StateNotifier<MovieListState> {
 
   Future<void> changeDisplayMode(MovieDisplayMode mode) async {
     if (mode != state.currentMode) {
-      state = state.copyWith(currentMode: mode);
+      setState(state.copyWith(currentMode: mode));
       if ((mode == MovieDisplayMode.popular && state.popularMovies.isEmpty) ||
           (mode == MovieDisplayMode.nowShowing && state.nowPlayingMovies.isEmpty)) {
         await fetchMovies();
@@ -76,12 +71,10 @@ class MovieListViewModel extends StateNotifier<MovieListState> {
   }
 
   Future<void> fetchTopRatedMovies() async {
-    try {
+    await runSafe(() async {
       final topRatedMovies = await _apiService.getTopRatedMovies();
-      state = state.copyWith(topRatedMovies: topRatedMovies);
-    } catch (e) {
-      // Handle error
-    }
+      setState(state.copyWith(topRatedMovies: topRatedMovies));
+    });
   }
 
   Future<Movie> fetchMovieDetails(int movieId) async {

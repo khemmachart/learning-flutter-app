@@ -34,10 +34,10 @@ class _MovieListPageState extends ConsumerState<MovieListPage> {
       appBar: AppBar(
         title: Text(widget.title, style: const TextStyle(fontWeight: FontWeight.bold)),
         actions: [
-          _buildDisplayModeButton(movieState.currentMode),
+          _buildDisplayModeButton(movieState.state.currentMode),
         ],
       ),
-      body: _buildMovieList(movieState),
+      body: _buildMovieList(movieState.state),
     );
   }
 
