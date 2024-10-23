@@ -5,6 +5,7 @@ import 'package:learning_flutter_app/core/models/movie.dart';
 import 'package:learning_flutter_app/core/models/review.dart';
 import 'package:learning_flutter_app/core/providers/movie_provider.dart';
 import 'package:learning_flutter_app/core/utils/extensions/string_extensions.dart';
+import 'package:learning_flutter_app/modules/checkout/page/checkout_page.dart';
 
 class MovieDetailPage extends ConsumerWidget {
   final Movie movie;
@@ -335,7 +336,7 @@ class MovieDetailPage extends ConsumerWidget {
           onPressed: () {
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) => MovieBookingPage(movie: movie),
+                builder: (context) => CheckoutPage(movie: movie),
               ),
             );
           },
@@ -351,191 +352,6 @@ class MovieDetailPage extends ConsumerWidget {
             elevation: 4,
             shadowColor: Colors.blue[300]!.withOpacity(0.5),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class MovieBookingPage extends StatefulWidget {
-  final Movie movie;
-
-  const MovieBookingPage({Key? key, required this.movie}) : super(key: key);
-
-  @override
-  _MovieBookingPageState createState() => _MovieBookingPageState();
-}
-
-class _MovieBookingPageState extends State<MovieBookingPage> {
-  DateTime? selectedDate;
-  String? selectedTime;
-  int selectedSeats = 1;
-
-  final List<String> availableTimes = ['10:00 AM', '1:00 PM', '4:00 PM', '7:00 PM', '10:00 PM'];
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Book ${widget.movie.title}'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildDatePicker(),
-            const SizedBox(height: 24),
-            _buildTimePicker(),
-            const SizedBox(height: 24),
-            _buildSeatSelector(),
-            const SizedBox(height: 32),
-            _buildBookingButton(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDatePicker() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Select Date', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        ElevatedButton(
-          onPressed: () async {
-            final DateTime? picked = await showDatePicker(
-              context: context,
-              initialDate: DateTime.now(),
-              firstDate: DateTime.now(),
-              lastDate: DateTime.now().add(const Duration(days: 30)),
-            );
-            if (picked != null && picked != selectedDate) {
-              setState(() {
-                selectedDate = picked;
-              });
-            }
-          },
-          child: Text(
-            selectedDate != null
-                ? '${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}'
-                : 'Choose Date',
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTimePicker() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Select Time', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          children: availableTimes.map((time) {
-            return ChoiceChip(
-              label: Text(time),
-              selected: selectedTime == time,
-              onSelected: (selected) {
-                setState(() {
-                  selectedTime = selected ? time : null;
-                });
-              },
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSeatSelector() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Number of Seats', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            IconButton(
-              icon: const Icon(Icons.remove),
-              onPressed: () {
-                if (selectedSeats > 1) {
-                  setState(() {
-                    selectedSeats--;
-                  });
-                }
-              },
-            ),
-            Text('$selectedSeats', style: const TextStyle(fontSize: 18)),
-            IconButton(
-              icon: const Icon(Icons.add),
-              onPressed: () {
-                setState(() {
-                  selectedSeats++;
-                });
-              },
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBookingButton() {
-    return ElevatedButton(
-      onPressed: selectedDate != null && selectedTime != null
-          ? () {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                  builder: (context) => BookingSuccessPage(movie: widget.movie),
-                ),
-              );
-            }
-          : null,
-      child: const Text('Confirm Booking', style: TextStyle(fontSize: 18)),
-      style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        minimumSize: const Size(double.infinity, 50),
-      ),
-    );
-  }
-}
-
-class BookingSuccessPage extends StatelessWidget {
-  final Movie movie;
-
-  const BookingSuccessPage({Key? key, required this.movie}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.check_circle, color: Colors.green, size: 100),
-            const SizedBox(height: 24),
-            Text(
-              'Booking Confirmed!',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'You have successfully booked tickets for ${movie.title}',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).popUntil((route) => route.isFirst);
-              },
-              child: const Text('Back to Movie List'),
-            ),
-          ],
         ),
       ),
     );
