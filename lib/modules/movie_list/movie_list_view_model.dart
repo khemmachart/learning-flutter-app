@@ -74,7 +74,7 @@ class MovieListViewModel extends StateNotifier<AsyncValue<List<Movie>>> {
       _topRatedMovies = await _apiService.getTopRatedMovies();
       state = AsyncValue.data(state.value ?? []);  // Trigger a rebuild
     } catch (e, stackTrace) {
-      // Handle error
+      // TODO: Handle error
     }
   }
 

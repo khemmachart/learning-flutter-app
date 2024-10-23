@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_flutter_app/core/services/moview_api_service.dart';
 import 'package:learning_flutter_app/modules/movie_list/movie_list_page.dart';
+import 'package:learning_flutter_app/core/utils/logger.dart';
 
 void main() {
+  logger.i('Starting the app');
   runApp(
     const ProviderScope(
       child: MyApp(),
@@ -41,15 +43,6 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
-// Define a provider for the counter
-final counterProvider = StateProvider<int>((ref) => 0);
-
-// Define a provider for the display mode
-final movieDisplayModeProvider = StateProvider<MovieDisplayMode>((ref) => MovieDisplayMode.popular);
-
-
-
 
 final movieApiServiceProvider = Provider<MovieApiService>((ref) => MovieApiService());
 
