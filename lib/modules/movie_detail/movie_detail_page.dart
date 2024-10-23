@@ -1,8 +1,8 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_flutter_app/core/models/cast.dart';
 import 'package:learning_flutter_app/core/models/movie.dart';
 import 'package:learning_flutter_app/core/models/review.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_flutter_app/core/providers/moview_list_view_model_provider.dart';
 import 'package:learning_flutter_app/core/utils/extensions/string_extensions.dart';
 
@@ -12,7 +12,7 @@ class MovieDetailPage extends ConsumerStatefulWidget {
   const MovieDetailPage({Key? key, required this.movie}) : super(key: key);
 
   @override
-  _MovieDetailPageState createState() => _MovieDetailPageState();
+  ConsumerState<MovieDetailPage> createState() => _MovieDetailPageState();
 }
 
 class _MovieDetailPageState extends ConsumerState<MovieDetailPage> {
@@ -25,8 +25,12 @@ class _MovieDetailPageState extends ConsumerState<MovieDetailPage> {
   @override
   void initState() {
     super.initState();
-    _movieDetailsFuture = ref.read(movieListViewModelProvider.notifier).fetchMovieDetails(widget.movie.id);
+    _movieDetailsFuture = _fetchMovieDetails();
     _loadReviews();
+  }
+
+  Future<Movie> _fetchMovieDetails() {
+    return ref.read(movieListViewModelProvider.notifier).fetchMovieDetails(widget.movie.id);
   }
 
   Future<void> _loadReviews() async {
@@ -42,7 +46,7 @@ class _MovieDetailPageState extends ConsumerState<MovieDetailPage> {
       });
     } catch (e) {
       setState(() => _isLoadingReviews = false);
-      // Handle error
+      // TODO: Handle error properly
     }
   }
 
@@ -58,33 +62,34 @@ class _MovieDetailPageState extends ConsumerState<MovieDetailPage> {
             return Center(child: Text('Error: ${snapshot.error}'));
           } else if (snapshot.hasData) {
             final movie = snapshot.data!;
-            return CustomScrollView(
-              slivers: [
-                _buildSliverAppBar(movie),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildMovieInfo(movie),
-                        const SizedBox(height: 32),
-                        _buildOverview(movie),
-                        const SizedBox(height: 32),
-                        _buildCast(movie),
-                        const SizedBox(height: 32),
-                        _buildReviews(),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            );
+            return _buildMovieDetails(movie);
           } else {
             return const Center(child: Text('No data available'));
           }
         },
       ),
+    );
+  }
+
+  Widget _buildMovieDetails(Movie movie) {
+    return CustomScrollView(
+      slivers: [
+        _buildSliverAppBar(movie),
+        SliverPadding(
+          padding: const EdgeInsets.all(24.0),
+          sliver: SliverList(
+            delegate: SliverChildListDelegate([
+              _buildMovieInfo(movie),
+              const SizedBox(height: 32),
+              _buildOverview(movie),
+              const SizedBox(height: 32),
+              _buildCast(movie),
+              const SizedBox(height: 32),
+              _buildReviews(),
+            ]),
+          ),
+        ),
+      ],
     );
   }
 
@@ -125,54 +130,58 @@ class _MovieDetailPageState extends ConsumerState<MovieDetailPage> {
   }
 
   Widget _buildMovieInfo(Movie movie) {
-    return Column(
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Hero(
-              tag: 'movie-poster-${movie.id}',
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  movie.posterPath ?? '',
-                  height: 180,
-                  width: 120,
-                  fit: BoxFit.cover,
-                ),
-              ),
+        Hero(
+          tag: 'movie-poster-${movie.id}',
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              movie.posterPath ?? '',
+              height: 180,
+              width: 120,
+              fit: BoxFit.cover,
             ),
-            const SizedBox(width: 24),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    movie.title,
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  Text('Release Date: ${movie.releaseDate}', style: TextStyle(fontSize: 16)),
-                  const SizedBox(height: 4),
-                  Text('Runtime: ${movie.runtime} minutes', style: TextStyle(fontSize: 16)),
-                  const SizedBox(height: 4),
-                  Text('Genres: ${movie.genres.join(", ")}', style: TextStyle(fontSize: 16)),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(Icons.star, color: Colors.amber, size: 24),
-                      const SizedBox(width: 8),
-                      Text(
-                        movie.voteAverage.toStringAsFixed(1),
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                ],
+          ),
+        ),
+        const SizedBox(width: 24),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                movie.title,
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              _buildInfoText('Release Date', movie.releaseDate),
+              _buildInfoText('Runtime', '${movie.runtime} minutes'),
+              _buildInfoText('Genres', movie.genres.join(", ")),
+              const SizedBox(height: 4),
+              _buildRatingWidget(movie.voteAverage),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoText(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Text('$label: $value', style: const TextStyle(fontSize: 16)),
+    );
+  }
+
+  Widget _buildRatingWidget(double rating) {
+    return Row(
+      children: [
+        const Icon(Icons.star, color: Colors.amber, size: 24),
+        const SizedBox(width: 8),
+        Text(
+          rating.toStringAsFixed(1),
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
       ],
     );
@@ -189,7 +198,7 @@ class _MovieDetailPageState extends ConsumerState<MovieDetailPage> {
         const SizedBox(height: 16),
         Text(
           movie.overview,
-          style: TextStyle(fontSize: 16, height: 1.5),
+          style: const TextStyle(fontSize: 16, height: 1.5),
         ),
       ],
     );
@@ -209,56 +218,47 @@ class _MovieDetailPageState extends ConsumerState<MovieDetailPage> {
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: movie.cast.length,
-            itemBuilder: (context, index) {
-              final cast = movie.cast[index];
-              return Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: Column(
-                  children: [
-                    CircleAvatar(
-                      radius: 40,
-                      backgroundImage: cast.profilePath != null
-                          ? NetworkImage(cast.profilePath!)
-                          : null,
-                      child: cast.profilePath == null
-                          ? const Icon(Icons.person, size: 40)
-                          : null,
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: 80,
-                      child: Text(
-                        cast.name,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (cast.character != null)
-                      SizedBox(
-                        width: 80,
-                        child: Text(
-                          cast.character!,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                  ],
-                ),
-              );
-            },
+            itemBuilder: (context, index) => _buildCastMember(movie.cast[index]),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildCastMember(Cast cast) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 16),
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 40,
+            backgroundImage: cast.profilePath != null ? NetworkImage(cast.profilePath!) : null,
+            child: cast.profilePath == null ? const Icon(Icons.person, size: 40) : null,
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: 80,
+            child: Text(
+              cast.name,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (cast.character != null)
+            SizedBox(
+              width: 80,
+              child: Text(
+                cast.character!,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -323,19 +323,6 @@ class _MovieDetailPageState extends ConsumerState<MovieDetailPage> {
     );
   }
 
-  Widget _buildRatingWidget(double rating) {
-    return Row(
-      children: [
-        const Icon(Icons.star, color: Colors.amber, size: 20),
-        const SizedBox(width: 4),
-        Text(
-          rating.toStringAsFixed(1),
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-      ],
-    );
-  }
-
   Widget _buildLoadMoreReviewsButton() {
     if (!_hasMoreReviews) return const SizedBox.shrink();
 
@@ -354,5 +341,4 @@ class _MovieDetailPageState extends ConsumerState<MovieDetailPage> {
       ),
     );
   }
-
 }

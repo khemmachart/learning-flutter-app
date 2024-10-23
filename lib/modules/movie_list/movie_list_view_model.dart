@@ -1,6 +1,6 @@
 import 'package:learning_flutter_app/core/models/movie.dart';
 import 'package:learning_flutter_app/modules/movie_list/movie_list_page.dart';
-import 'package:learning_flutter_app/core/services/moview_api_service.dart';
+import 'package:learning_flutter_app/core/services/movie_api_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_flutter_app/core/models/review.dart';
 
@@ -10,9 +10,11 @@ class MovieListViewModel extends StateNotifier<AsyncValue<List<Movie>>> {
   bool _isLoading = false;
   MovieDisplayMode _currentMode = MovieDisplayMode.popular;
 
+  Map<MovieDisplayMode, List<Movie>> _movieCache = {
+    MovieDisplayMode.popular: [],
+    MovieDisplayMode.nowShowing: [],
+  };
   List<Movie> _topRatedMovies = [];
-  List<Movie> _popularMovies = [];
-  List<Movie> _nowPlayingMovies = [];
 
   MovieListViewModel(this._apiService) : super(const AsyncValue.loading()) {
     fetchMovies();
@@ -25,13 +27,10 @@ class MovieListViewModel extends StateNotifier<AsyncValue<List<Movie>>> {
     try {
       if (mode != null && mode != _currentMode) {
         _currentMode = mode;
-        if (_currentMode == MovieDisplayMode.popular && _popularMovies.isEmpty) {
-          _currentPage = 1;
-        } else if (_currentMode == MovieDisplayMode.nowShowing && _nowPlayingMovies.isEmpty) {
+        if (_movieCache[_currentMode]!.isEmpty) {
           _currentPage = 1;
         } else {
-          // If we already have movies for this mode, just update the state
-          state = AsyncValue.data(_currentMode == MovieDisplayMode.popular ? _popularMovies : _nowPlayingMovies);
+          state = AsyncValue.data(_movieCache[_currentMode]!);
           _isLoading = false;
           return;
         }
@@ -45,13 +44,11 @@ class MovieListViewModel extends StateNotifier<AsyncValue<List<Movie>>> {
           ? await _apiService.getPopularMovies(page: _currentPage)
           : await _apiService.getNowPlayingMovies(page: _currentPage);
       
-      if (_currentMode == MovieDisplayMode.popular) {
-        _popularMovies = loadMore ? [..._popularMovies, ...movies] : movies;
-        state = AsyncValue.data(_popularMovies);
-      } else {
-        _nowPlayingMovies = loadMore ? [..._nowPlayingMovies, ...movies] : movies;
-        state = AsyncValue.data(_nowPlayingMovies);
-      }
+      _movieCache[_currentMode] = loadMore 
+          ? [..._movieCache[_currentMode]!, ...movies] 
+          : movies;
+      
+      state = AsyncValue.data(_movieCache[_currentMode]!);
     } catch (e, stackTrace) {
       state = AsyncValue.error(e, stackTrace);
     } finally {
@@ -74,7 +71,8 @@ class MovieListViewModel extends StateNotifier<AsyncValue<List<Movie>>> {
       _topRatedMovies = await _apiService.getTopRatedMovies();
       state = AsyncValue.data(state.value ?? []);  // Trigger a rebuild
     } catch (e, stackTrace) {
-      // TODO: Handle error
+      // Handle error
+      state = AsyncValue.error(e, stackTrace);
     }
   }
 

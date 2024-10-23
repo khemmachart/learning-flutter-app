@@ -9,7 +9,6 @@ final movieDisplayModeProvider = StateProvider<MovieDisplayMode>((ref) => MovieD
 
 enum MovieDisplayMode { popular, nowShowing }
 
-
 class MovieListPage extends ConsumerStatefulWidget {
   const MovieListPage({super.key, required this.title});
 
@@ -42,26 +41,32 @@ class _MovieListPageState extends ConsumerState<MovieListPage> {
         ],
       ),
       body: moviesAsyncValue.when(
-        data: (movies) => NotificationListener<ScrollNotification>(
-          onNotification: (ScrollNotification scrollInfo) {
-            if (scrollInfo.metrics.pixels == scrollInfo.metrics.maxScrollExtent) {
-              ref.read(movieListViewModelProvider.notifier).loadMore();
-            }
-            return true;
-          },
-          child: ListView(
-            children: [
-              _buildTopRatedSection(topRatedMovies),
-              const DisplayModeTitle(),
-              ...movies.map((movie) => _buildMovieListItem(context, movie)).toList(),
-              _buildLoadMoreIndicator(),
-            ],
-          ),
-        ),
+        data: (movies) => _buildMovieList(movies, topRatedMovies),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stackTrace) => Center(child: Text('Error: $error')),
       ),
     );
+  }
+
+  Widget _buildMovieList(List<Movie> movies, List<Movie> topRatedMovies) {
+    return NotificationListener<ScrollNotification>(
+      onNotification: _handleScrollNotification,
+      child: ListView(
+        children: [
+          _buildTopRatedSection(topRatedMovies),
+          const DisplayModeTitle(),
+          ...movies.map((movie) => _buildMovieListItem(context, movie)),
+          _buildLoadMoreIndicator(),
+        ],
+      ),
+    );
+  }
+
+  bool _handleScrollNotification(ScrollNotification scrollInfo) {
+    if (scrollInfo.metrics.pixels == scrollInfo.metrics.maxScrollExtent) {
+      ref.read(movieListViewModelProvider.notifier).loadMore();
+    }
+    return true;
   }
 
   Widget _buildTopRatedSection(List<Movie> topRatedMovies) {
@@ -86,83 +91,82 @@ class _MovieListPageState extends ConsumerState<MovieListPage> {
             autoPlayAnimationDuration: const Duration(milliseconds: 800),
             viewportFraction: 0.8,
           ),
-          items: topRatedMovies.map((movie) {
-            return Builder(
-              builder: (BuildContext context) {
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => MovieDetailPage(movie: movie),
-                      ),
-                    );
-                  },
-                  child: Hero(
-                    tag: 'top-rated-movie-${movie.id}',
-                    child: Material(
-                      type: MaterialType.transparency,
-                      child: Container(
-                        width: MediaQuery.of(context).size.width,
-                        margin: const EdgeInsets.symmetric(horizontal: 5.0),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8.0),
-                          image: DecorationImage(
-                            image: NetworkImage(movie.posterPath ?? ''),
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8.0),
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.transparent,
-                                Colors.black.withOpacity(0.7),
-                              ],
-                            ),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  movie.title,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.star, color: Colors.amber, size: 16),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      movie.voteAverage.toStringAsFixed(1),
-                                      style: const TextStyle(color: Colors.white),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            );
-          }).toList(),
+          items: topRatedMovies.map((movie) => _buildCarouselItem(movie)).toList(),
         ),
         const SizedBox(height: 16),
       ],
+    );
+  }
+
+  Widget _buildCarouselItem(Movie movie) {
+    return Builder(
+      builder: (BuildContext context) {
+        return GestureDetector(
+          onTap: () => _navigateToMovieDetail(context, movie),
+          child: Hero(
+            tag: 'top-rated-movie-${movie.id}',
+            child: Material(
+              type: MaterialType.transparency,
+              child: Container(
+                width: MediaQuery.of(context).size.width,
+                margin: const EdgeInsets.symmetric(horizontal: 5.0),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8.0),
+                  image: DecorationImage(
+                    image: NetworkImage(movie.posterPath ?? ''),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                child: _buildCarouselItemOverlay(movie),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCarouselItemOverlay(Movie movie) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8.0),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.transparent,
+            Colors.black.withOpacity(0.7),
+          ],
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              movie.title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Icon(Icons.star, color: Colors.amber, size: 16),
+                const SizedBox(width: 4),
+                Text(
+                  movie.voteAverage.toStringAsFixed(1),
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -207,14 +211,7 @@ class _MovieListPageState extends ConsumerState<MovieListPage> {
 
   Widget _buildMovieListItem(BuildContext context, Movie movie) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => MovieDetailPage(movie: movie),
-          ),
-        );
-      },
+      onTap: () => _navigateToMovieDetail(context, movie),
       child: Card(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Padding(
@@ -222,74 +219,89 @@ class _MovieListPageState extends ConsumerState<MovieListPage> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Left column: Movie poster
-              Hero(
-                tag: 'movie-poster-${movie.id}',
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: movie.posterPath != null
-                    ? Image.network(
-                        movie.posterPath!,
-                        width: 100,
-                        height: 150,
-                        fit: BoxFit.cover,
-                      )
-                    : Container(
-                        width: 100,
-                        height: 150,
-                        decoration: BoxDecoration(
-                          color: Colors.blue[700],
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Icon(Icons.movie, color: Colors.white, size: 40),
-                      ),
-                ),
-              ),
+              _buildMoviePoster(movie),
               const SizedBox(width: 16),
-              // Right column: Movie info
               Expanded(
-                child: Hero(
-                  tag: 'movie-info-${movie.id}',
-                  child: Material(
-                    color: Colors.transparent,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          movie.title,
-                          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue[900], fontSize: 18),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "${movie.genres.join(", ")}",
-                          style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          movie.overview,
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: Colors.grey[800], fontSize: 14),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Icon(Icons.star, color: Colors.amber[700], size: 20),
-                            const SizedBox(width: 4),
-                            Text(
-                              movie.voteAverage.toStringAsFixed(1),
-                              style: TextStyle(color: Colors.grey[800], fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                child: _buildMovieInfo(movie),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildMoviePoster(Movie movie) {
+    return Hero(
+      tag: 'movie-poster-${movie.id}',
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: movie.posterPath != null
+          ? Image.network(
+              movie.posterPath!,
+              width: 100,
+              height: 150,
+              fit: BoxFit.cover,
+            )
+          : Container(
+              width: 100,
+              height: 150,
+              decoration: BoxDecoration(
+                color: Colors.blue[700],
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Icon(Icons.movie, color: Colors.white, size: 40),
+            ),
+      ),
+    );
+  }
+
+  Widget _buildMovieInfo(Movie movie) {
+    return Hero(
+      tag: 'movie-info-${movie.id}',
+      child: Material(
+        color: Colors.transparent,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              movie.title,
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue[900], fontSize: 18),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              movie.genres.join(", "),
+              style: TextStyle(color: Colors.grey[600], fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              movie.overview,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: Colors.grey[800], fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.star, color: Colors.amber[700], size: 20),
+                const SizedBox(width: 4),
+                Text(
+                  movie.voteAverage.toStringAsFixed(1),
+                  style: TextStyle(color: Colors.grey[800], fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _navigateToMovieDetail(BuildContext context, Movie movie) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MovieDetailPage(movie: movie),
       ),
     );
   }
@@ -317,46 +329,50 @@ class DisplayModeTitle extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.blue[50],
-              borderRadius: BorderRadius.circular(25),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.blue[100]!.withOpacity(0.5),
-                  spreadRadius: 2,
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(4.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _buildSegmentButton(
-                      context,
-                      ref,
-                      'Popular',
-                      MovieDisplayMode.popular,
-                      displayMode == MovieDisplayMode.popular,
-                    ),
-                  ),
-                  Expanded(
-                    child: _buildSegmentButton(
-                      context,
-                      ref,
-                      'Now Playing',
-                      MovieDisplayMode.nowShowing,
-                      displayMode == MovieDisplayMode.nowShowing,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          _buildDisplayModeToggle(context, ref, displayMode),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDisplayModeToggle(BuildContext context, WidgetRef ref, MovieDisplayMode displayMode) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.blue[50],
+        borderRadius: BorderRadius.circular(25),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue[100]!.withOpacity(0.5),
+            spreadRadius: 2,
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(4.0),
+        child: Row(
+          children: [
+            Expanded(
+              child: _buildSegmentButton(
+                context,
+                ref,
+                'Popular',
+                MovieDisplayMode.popular,
+                displayMode == MovieDisplayMode.popular,
+              ),
+            ),
+            Expanded(
+              child: _buildSegmentButton(
+                context,
+                ref,
+                'Now Playing',
+                MovieDisplayMode.nowShowing,
+                displayMode == MovieDisplayMode.nowShowing,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

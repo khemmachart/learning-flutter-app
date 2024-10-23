@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_flutter_app/core/services/moview_api_service.dart';
+import 'package:learning_flutter_app/core/services/movie_api_service.dart';
 import 'package:learning_flutter_app/modules/movie_list/movie_list_page.dart';
 import 'package:learning_flutter_app/core/utils/logger.dart';
 
