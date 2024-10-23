@@ -4,7 +4,10 @@ import 'package:learning_flutter_app/core/models/movie.dart';
 import 'package:learning_flutter_app/core/providers/checkout_provider.dart';
 import 'package:learning_flutter_app/modules/checkout/state/checkout_state.dart';
 import 'package:learning_flutter_app/modules/payment/payment_success/page/payment_success_page.dart';
-import 'package:intl/intl.dart';
+import 'package:learning_flutter_app/modules/checkout/widgets/date_picker.dart';
+import 'package:learning_flutter_app/modules/checkout/widgets/time_picker.dart';
+import 'package:learning_flutter_app/modules/checkout/widgets/seat_selector.dart';
+import 'package:learning_flutter_app/modules/checkout/widgets/checkout_button.dart';
 
 class CheckoutPage extends ConsumerStatefulWidget {
   final Movie movie;
@@ -41,13 +44,27 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildDatePicker(),
+                DatePicker(
+                  selectedDate: selectedDate,
+                  onDateSelected: (date) => setState(() => selectedDate = date),
+                ),
                 const SizedBox(height: 24),
-                _buildTimePicker(),
+                TimePicker(
+                  availableTimes: availableTimes,
+                  selectedTime: selectedTime,
+                  onTimeSelected: (time) => setState(() => selectedTime = time),
+                ),
                 const SizedBox(height: 24),
-                _buildSeatSelector(),
+                SeatSelector(
+                  selectedSeats: selectedSeats,
+                  onSeatsChanged: (seats) => setState(() => selectedSeats = seats),
+                ),
                 const SizedBox(height: 32),
-                _buildCheckoutButton(checkoutState),
+                CheckoutButton(
+                  checkoutState: checkoutState,
+                  isEnabled: selectedDate != null && selectedTime != null,
+                  onPressed: () => _processCheckout(),
+                ),
                 if (checkoutState.isLoading)
                   const Center(child: CircularProgressIndicator(color: Colors.grey)),
                 if (checkoutState.errorMessage != null)
@@ -66,182 +83,28 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     );
   }
 
-  Widget _buildDatePicker() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Select Date',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.grey[100],
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: ListTile(
-            onTap: () async {
-              final DateTime? picked = await showDatePicker(
-                context: context,
-                initialDate: DateTime.now(),
-                firstDate: DateTime.now(),
-                lastDate: DateTime.now().add(const Duration(days: 30)),
-                builder: (BuildContext context, Widget? child) {
-                  return Theme(
-                    data: ThemeData.light().copyWith(
-                      colorScheme: ColorScheme.light(
-                        primary: Colors.grey[800]!,
-                        onPrimary: Colors.white,
-                        surface: Colors.white,
-                        onSurface: Colors.black,
-                      ),
-                      dialogBackgroundColor: Colors.white,
-                    ),
-                    child: child!,
-                  );
-                },
-              );
-              if (picked != null && picked != selectedDate) {
-                setState(() {
-                  selectedDate = picked;
-                });
-              }
-            },
-            title: Text(
-              selectedDate != null
-                  ? DateFormat('MMMM d, yyyy').format(selectedDate!)
-                  : 'Choose Date',
-              style: TextStyle(color: Colors.black),
+  void _processCheckout() async {
+    await ref.read(checkoutViewModelProvider.notifier).processCheckout(
+          widget.movie,
+          selectedDate!,
+          selectedTime!,
+          selectedSeats,
+        );
+    
+    if (mounted) {
+      final checkoutState = ref.read(checkoutViewModelProvider);
+      if (checkoutState.isSuccess) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => PaymentSuccessPage(
+              movie: widget.movie,
+              date: selectedDate!,
+              time: selectedTime!,
+              seats: selectedSeats,
             ),
-            trailing: Icon(Icons.calendar_today, color: Colors.grey[600]),
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTimePicker() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Select Time',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: availableTimes.map((time) {
-            return ChoiceChip(
-              label: Text(time),
-              selected: selectedTime == time,
-              onSelected: (selected) {
-                setState(() {
-                  selectedTime = selected ? time : null;
-                });
-              },
-              backgroundColor: Colors.grey[100],
-              selectedColor: Colors.grey[300],
-              labelStyle: TextStyle(
-                color: selectedTime == time ? Colors.black : Colors.grey[600],
-              ),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSeatSelector() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Number of Seats',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.grey[100],
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                icon: Icon(Icons.remove, color: Colors.grey[600]),
-                onPressed: () {
-                  if (selectedSeats > 1) {
-                    setState(() {
-                      selectedSeats--;
-                    });
-                  }
-                },
-              ),
-              Text(
-                '$selectedSeats',
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black),
-              ),
-              IconButton(
-                icon: Icon(Icons.add, color: Colors.grey[600]),
-                onPressed: () {
-                  setState(() {
-                    selectedSeats++;
-                  });
-                },
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCheckoutButton(CheckoutState state) {
-    return ElevatedButton(
-      onPressed: state.isLoading || selectedDate == null || selectedTime == null
-          ? null
-          : () async {
-              await ref.read(checkoutViewModelProvider.notifier).processCheckout(
-                    widget.movie,
-                    selectedDate!,
-                    selectedTime!,
-                    selectedSeats,
-                  );
-              
-              if (mounted) {
-                final checkoutState = ref.read(checkoutViewModelProvider);
-                if (checkoutState.isSuccess) {
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (context) => PaymentSuccessPage(
-                        movie: widget.movie,
-                        date: selectedDate!,
-                        time: selectedTime!,
-                        seats: selectedSeats,
-                      ),
-                    ),
-                  );
-                }
-              }
-            },
-      child: Text(
-        'Confirm Checkout',
-        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-      ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.grey[800],
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        minimumSize: const Size(double.infinity, 50),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        elevation: 2,
-      ),
-    );
+        );
+      }
+    }
   }
 }

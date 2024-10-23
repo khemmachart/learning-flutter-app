@@ -16,6 +16,6 @@ class Cast with _$Cast {
 
 extension CastExtension on Cast {
   String? get fullProfilePath => profilePath != null 
-    ? 'https://image.tmdb.org/t/p/w185$profilePath' 
+    ? 'https://image.tmdb.org/t/p/w300$profilePath' 
     : null;
 }

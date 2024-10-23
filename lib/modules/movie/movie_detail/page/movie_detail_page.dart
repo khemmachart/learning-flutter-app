@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_flutter_app/core/models/cast.dart';
 import 'package:learning_flutter_app/core/models/movie.dart';
 import 'package:learning_flutter_app/core/models/review.dart';
 import 'package:learning_flutter_app/core/providers/movie_provider.dart';
-import 'package:learning_flutter_app/core/utils/extensions/string_extensions.dart';
 import 'package:learning_flutter_app/modules/checkout/page/checkout_page.dart';
+import 'package:learning_flutter_app/modules/movie/movie_detail/widgets/movie_info_widget.dart';
+import 'package:learning_flutter_app/modules/movie/movie_detail/widgets/movie_overview_widget.dart';
+import 'package:learning_flutter_app/modules/movie/movie_detail/widgets/movie_cast_widget.dart';
+import 'package:learning_flutter_app/modules/movie/movie_detail/widgets/movie_review_widget.dart';
 
 class MovieDetailPage extends ConsumerWidget {
   final Movie movie;
@@ -46,13 +48,13 @@ class MovieDetailPage extends ConsumerWidget {
           padding: const EdgeInsets.all(24.0),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
-              _buildMovieInfo(movie),
+              MovieInfo(movie: movie),
               const SizedBox(height: 32),
-              _buildOverview(movie),
+              MovieOverview(movie: movie),
               const SizedBox(height: 32),
-              _buildCast(movie),
+              MovieCast(movie: movie),
               const SizedBox(height: 32),
-              _buildReviews(context, reviews),
+              MovieReviews(movieId: movie.id, reviews: reviews),
               const SizedBox(height: 80), // Add extra space for the book button
             ]),
           ),
@@ -94,226 +96,6 @@ class MovieDetailPage extends ConsumerWidget {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildMovieInfo(Movie movie) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Hero(
-          tag: 'movie-poster-${movie.id}',
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.network(
-              movie.posterPath ?? '',
-              height: 180,
-              width: 120,
-              fit: BoxFit.cover,
-            ),
-          ),
-        ),
-        const SizedBox(width: 24),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                movie.title,
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              _buildInfoText('Release Date', movie.releaseDate),
-              _buildInfoText('Runtime', '${movie.runtime} minutes'),
-              _buildInfoText('Genres', movie.genres.join(", ")),
-              const SizedBox(height: 4),
-              _buildRatingWidget(movie.voteAverage),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildInfoText(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Text('$label: $value', style: const TextStyle(fontSize: 16)),
-    );
-  }
-
-  Widget _buildRatingWidget(double rating) {
-    return Row(
-      children: [
-        const Icon(Icons.star, color: Colors.amber, size: 24),
-        const SizedBox(width: 8),
-        Text(
-          rating.toStringAsFixed(1),
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildOverview(Movie movie) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Overview',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          movie.overview,
-          style: const TextStyle(fontSize: 16, height: 1.5),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCast(Movie movie) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Cast',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          height: 170,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: movie.cast.length,
-            itemBuilder: (context, index) => _buildCastMember(movie.cast[index]),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCastMember(Cast cast) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 16),
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 40,
-            backgroundImage: cast.profilePath != null ? NetworkImage(cast.profilePath!) : null,
-            child: cast.profilePath == null ? const Icon(Icons.person, size: 40) : null,
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: 80,
-            child: Text(
-              cast.name,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          if (cast.character != null)
-            SizedBox(
-              width: 80,
-              child: Text(
-                cast.character!,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildReviews(BuildContext context, List<Review> reviews) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Reviews',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 16),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: reviews.length + 1,
-          itemBuilder: (context, index) {
-            if (index < reviews.length) {
-              return _buildReviewCard(reviews[index]);
-            } else {
-              return _buildLoadMoreReviewsButton(context);
-            }
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildReviewCard(Review review) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 24),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  review.author,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                ),
-                if (review.rating != null) _buildRatingWidget(review.rating!),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              review.content,
-              style: const TextStyle(fontSize: 16, height: 1.5),
-              maxLines: 5,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Posted on ${(review.createdAt).formatDate()}',
-              style: TextStyle(color: Colors.grey[600], fontSize: 14),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLoadMoreReviewsButton(BuildContext context) {
-    return Consumer(
-      builder: (context, ref, child) {
-        final movieDetailState = ref.watch(movieDetailViewModelProvider(movie.id));
-        if (!movieDetailState.hasMoreReviews) return const SizedBox.shrink();
-
-        return Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16.0),
-            child: movieDetailState.isLoadingReviews
-                ? const CircularProgressIndicator()
-                : ElevatedButton(
-                    onPressed: () {
-                      ref.read(movieDetailViewModelProvider(movie.id).notifier).loadReviews();
-                    },
-                    child: const Text('Load More Reviews', style: TextStyle(fontSize: 16)),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                  ),
-          ),
-        );
-      },
     );
   }
 
