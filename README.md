@@ -88,6 +88,126 @@ flutter build apk # For Android
 flutter build ios # For iOS (on macOS only)
 ```
 
+## Project Architecture and Structure
+
+### MVVM Pattern
+This project implements the Model-View-ViewModel (MVVM) architectural pattern. MVVM is chosen for its ability to:
+- Organize code more effectively
+- Separate concerns between UI and business logic
+- Manage complex UI states more efficiently
+- Improve testability of the codebase
+
+### Domain-Driven Folder Structure
+The project's folder structure is organized based on business domains. This approach offers several benefits:
+- Easier application of modularization concepts
+- Improved code navigation and maintenance
+- Better scalability for large projects
+- Clear separation of concerns between different features or modules
+
+### Core Functionality
+Reusable code and core functions are centralized in the `/core` directory. This organization:
+- Promotes code reuse across the application
+- Keeps common utilities and services in one place
+- Simplifies maintenance of shared functionality
+
+## Folder Structure
+
+```
+lib/
+├── main.dart
+├── core/
+│   ├── base/
+│   │   └── base_view_model.dart
+│   ├── di/
+│   │   └── dependency_injection.dart
+│   ├── provider/
+│   │   ├── checkout_provider.dart
+│   │   └── movie_provider.dart
+│   ├── services/
+│   │   ├── checkout_service.dart
+│   │   └── movie_service.dart
+│   ├── network/
+│   │   └── network_client.dart
+│   └── utils/
+│       ├── validators.dart
+│       ├── helpers.dart
+│       ├── logger.dart
+│       └── extension.dart
+│
+├── modules(features)/
+│   └── movie/
+│   │   ├── movie_list/
+│   │   │   ├── page/
+│   │   │   ├── state/
+│   │   │   ├── view_model/
+│   │   │   └── widget/
+│   │   └── movie_detail/
+│   │       ├── page/
+│   │       ├── state/
+│   │       ├── view_model/
+│   │       └── widget/
+│   ├── checkout/
+│   │   ├── page/
+│   │   ├── state/
+│   │   ├── view_model/
+│   │   └── widget/
+│   └── payment/
+│   └── order/
+├── tests/
+pubspec.yaml
+```
+
+## Project Dependencies
+
+This project uses several key dependencies to enhance functionality and improve development efficiency:
+
+### State Management
+- **flutter_riverpod (^2.6.1)** and **riverpod_annotation (^2.6.1)**
+  - Riverpod is a powerful state management library for Flutter.
+  - It provides a robust and scalable way to manage app state, making it easier to share and update data across different parts of your application.
+
+### UI Components
+- **carousel_slider (5.0.0)**
+  - A Flutter widget for creating image carousels.
+  - It allows for easy implementation of scrollable image galleries or slideshows, enhancing the user interface and experience.
+
+### Configuration Management
+- **flutter_dotenv (^5.2.1)**
+  - A package for loading environment variables from a .env file.
+  - It allows storing sensitive information (like API keys) outside of the source code, improving security and making it easier to manage different configurations.
+
+### Dependency Injection
+- **get_it (^8.0.1)**
+  - A simple service locator for dependency injection.
+  - It simplifies the process of managing dependencies in the app, making it easier to create and access shared instances of objects throughout the codebase.
+
+### Networking
+- **dio (^5.7.0)**
+  - A powerful HTTP client for Dart.
+  - It provides an easy-to-use interface for making API calls, with features like interceptors, form data, request cancellation, and more.
+
+### Data Serialization
+- **json_annotation (^4.9.0)** and **json_serializable (^6.8.0)**
+  - Libraries for JSON serialization and deserialization.
+  - They simplify the process of converting Dart objects to JSON and vice versa, reducing boilerplate code and potential errors in data handling.
+
+### Code Generation
+- **freezed (^2.5.7)** and **freezed_annotation (^2.4.4)**
+  - A code generation package for creating immutable classes.
+  - It automates the creation of data classes, reducing boilerplate and ensuring consistency in data models.
+
+### Logging
+- **logger (^2.4.0)**
+  - A flexible logging package for Dart.
+  - It provides an easy way to add logging to the app, which is crucial for debugging and monitoring app behavior.
+
+### Internationalization
+- **intl (^0.19.0)**
+  - A package for internationalization and localization.
+  - It provides tools for translating app content, formatting dates, numbers, and plurals, making it easier to create apps for multiple languages and regions.
+
+These dependencies work together to provide a robust foundation for the app, enabling efficient development, maintainable code, and a rich user experience.
+
 ## Contributing to the project
 
 To contribute to the project, follow these steps:
