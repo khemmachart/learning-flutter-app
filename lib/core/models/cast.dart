@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'cast.freezed.dart';
 part 'cast.g.dart';
@@ -11,13 +12,11 @@ class Cast with _$Cast {
     String? profilePath,
   }) = _Cast;
 
-  factory Cast.fromJson(Map<String, dynamic> json) => Cast(
-    name: json['name'] as String,
-    character: json['character'] as String?,
-    profilePath: json['profile_path'] != null ? 'https://image.tmdb.org/t/p/w185${json['profile_path']}' : null,
-  );
+  factory Cast.fromJson(Map<String, dynamic> json) => _$CastFromJson(json);
 }
 
 extension CastExtension on Cast {
-  String? get fullProfilePath => profilePath;
+  String? get fullProfilePath => profilePath != null 
+    ? 'https://image.tmdb.org/t/p/w185$profilePath' 
+    : null;
 }
