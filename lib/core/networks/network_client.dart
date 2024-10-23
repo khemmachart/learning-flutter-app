@@ -1,20 +1,24 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:dio/dio.dart';
 import 'package:logger/logger.dart';
 
 class NetworkClient {
-  static const String _baseUrl = 'https://api.themoviedb.org/3';
-  static const String _apiKey = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI1YjI5ZWNiOWI1YzlkY2E4ODBhZjE1YTZmM2NlNjgyZCIsIm5iZiI6MTcyODkyMDY4Ny42MjY2OTksInN1YiI6IjY3MGQzYmIxZDVmOTNhM2RhMGJiY2M3ZSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.6SOjjGI7YB0-8H2oZuf5VZXAKXcSOykJmqfqTtOUlyE';
-
+  final String baseUrl;
+  final String apiKey;
   final Dio _dio;
   final Logger _logger = Logger();
 
-  NetworkClient({Dio? dio}) : _dio = dio ?? Dio() {
-    _dio.options.baseUrl = _baseUrl;
+
+  NetworkClient({Dio? dio})
+      : baseUrl = dotenv.env['API_BASE_URL'] ?? '',
+        apiKey = dotenv.env['API_KEY'] ?? '',
+        _dio = dio ?? Dio() {
+    _dio.options.baseUrl = baseUrl;
     _dio.options.headers = {
-      'Authorization': 'Bearer $_apiKey',
+      'Authorization': 'Bearer $apiKey',
       'accept': 'application/json',
     };
-    _logger.d('NetworkClient initialized with base URL: $_baseUrl');
+    _logger.d('NetworkClient initialized with base URL: $baseUrl');
   }
 
   Future<Map<String, dynamic>> _handleRequest(Future<Response<dynamic>> Function() requestFunction, String endpoint) async {

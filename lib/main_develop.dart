@@ -2,8 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_flutter_app/modules/movie/movie_list/page/movie_list_page.dart';
 import 'package:learning_flutter_app/core/utils/logger.dart';
-void main() {
-  logger.i('Starting the app');
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+Future<void> main() async {
+  try {
+    await dotenv.load(fileName: ".env");
+    logger.i('Starting the app');
+  } catch (e) {
+    print("Error loading .env file: $e");
+    // You might want to handle this error more gracefully
+  }
   runApp(
     const ProviderScope(
       child: MyApp(),
