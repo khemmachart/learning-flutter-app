@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_flutter_app/core/models/movie.dart';
-import 'package:learning_flutter_app/core/providers/moview_list_view_model_provider.dart';
-import 'package:learning_flutter_app/modules/movie_detail/movie_detail_page.dart';
+import 'package:learning_flutter_app/core/providers/movie_provider.dart';
+import 'package:learning_flutter_app/modules/movie/movie_detail/page/movie_detail_page.dart';
+import 'package:learning_flutter_app/modules/movie/movie_list/state/movie_list_state.dart';
 import 'package:carousel_slider/carousel_slider.dart';
-
-final movieDisplayModeProvider = StateProvider<MovieDisplayMode>((ref) => MovieDisplayMode.nowShowing);
-
-enum MovieDisplayMode { popular, nowShowing }
 
 class MovieListPage extends ConsumerStatefulWidget {
   const MovieListPage({super.key, required this.title});
@@ -29,42 +26,42 @@ class _MovieListPageState extends ConsumerState<MovieListPage> {
 
   @override
   Widget build(BuildContext context) {
-    final displayMode = ref.watch(movieDisplayModeProvider);
-    final moviesAsyncValue = ref.watch(movieListViewModelProvider);
-    final topRatedMovies = ref.watch(movieListViewModelProvider.notifier).topRatedMovies;
+    final movieState = ref.watch(movieListViewModelProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title, style: const TextStyle(fontWeight: FontWeight.bold)),
         actions: [
-          _buildDisplayModeButton(displayMode, ref),
+          _buildDisplayModeButton(movieState.currentMode),
         ],
       ),
-      body: moviesAsyncValue.when(
-        data: (movies) => _buildMovieList(movies, topRatedMovies),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stackTrace) => Center(child: Text('Error: $error')),
-      ),
+      body: _buildMovieList(movieState),
     );
   }
 
-  Widget _buildMovieList(List<Movie> movies, List<Movie> topRatedMovies) {
+  Widget _buildMovieList(MovieListState movieState) {
+    final movies = movieState.currentMode == MovieDisplayMode.popular
+        ? movieState.popularMovies
+        : movieState.nowPlayingMovies;
+
     return NotificationListener<ScrollNotification>(
       onNotification: _handleScrollNotification,
       child: ListView(
         children: [
-          _buildTopRatedSection(topRatedMovies),
+          _buildTopRatedSection(movieState.topRatedMovies),
           const DisplayModeTitle(),
           ...movies.map((movie) => _buildMovieListItem(context, movie)),
-          _buildLoadMoreIndicator(),
+          if (movieState.isLoading) _buildLoadMoreIndicator(),
         ],
       ),
     );
   }
 
   bool _handleScrollNotification(ScrollNotification scrollInfo) {
-    if (scrollInfo.metrics.pixels == scrollInfo.metrics.maxScrollExtent) {
-      ref.read(movieListViewModelProvider.notifier).loadMore();
+    if (!scrollInfo.metrics.outOfRange) {
+      if (scrollInfo.metrics.pixels > scrollInfo.metrics.maxScrollExtent - 500) {
+        ref.read(movieListViewModelProvider.notifier).loadMore();
+      }
     }
     return true;
   }
@@ -177,12 +174,12 @@ class _MovieListPageState extends ConsumerState<MovieListPage> {
     );
   }
 
-  Widget _buildDisplayModeButton(MovieDisplayMode displayMode, WidgetRef ref) {
+  Widget _buildDisplayModeButton(MovieDisplayMode displayMode) {
     return PopupMenuButton<MovieDisplayMode>(
       initialValue: displayMode,
-      onSelected: (MovieDisplayMode mode) {
-        ref.read(movieDisplayModeProvider.notifier).state = mode;
-        ref.read(movieListViewModelProvider.notifier).changeDisplayMode(mode);
+      onSelected: (MovieDisplayMode selectedMode) {
+        // Trigger the mode switch here
+        ref.read(movieListViewModelProvider.notifier).changeDisplayMode(selectedMode);
       },
       itemBuilder: (BuildContext context) => <PopupMenuEntry<MovieDisplayMode>>[
         const PopupMenuItem<MovieDisplayMode>(
@@ -312,7 +309,7 @@ class DisplayModeTitle extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final displayMode = ref.watch(movieDisplayModeProvider);
+    final movieState = ref.watch(movieListViewModelProvider);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
@@ -329,7 +326,7 @@ class DisplayModeTitle extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
-          _buildDisplayModeToggle(context, ref, displayMode),
+          _buildDisplayModeToggle(context, ref, movieState.currentMode),
         ],
       ),
     );
@@ -381,7 +378,6 @@ class DisplayModeTitle extends ConsumerWidget {
     return GestureDetector(
       onTap: () {
         if (!isSelected) {
-          ref.read(movieDisplayModeProvider.notifier).state = mode;
           ref.read(movieListViewModelProvider.notifier).changeDisplayMode(mode);
         }
       },

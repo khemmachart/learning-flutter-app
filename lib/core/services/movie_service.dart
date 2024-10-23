@@ -4,11 +4,11 @@ import 'package:learning_flutter_app/core/models/review.dart';
 import 'package:learning_flutter_app/core/networks/network_client.dart';
 import 'package:learning_flutter_app/core/utils/logger.dart';
 
-class MovieApiService {
+class MovieService {
   final NetworkClient _networkClient;
   late Map<int, String> _genreMap;
 
-  MovieApiService({NetworkClient? networkClient})
+  MovieService({NetworkClient? networkClient})
       : _networkClient = networkClient ?? NetworkClient() {
     _initGenres();
   }
@@ -113,7 +113,12 @@ class MovieApiService {
       });
 
       final results = data['results'] as List<dynamic>;
-      final reviews = results.map((reviewData) => Review.fromJson(reviewData)).toList();
+      final reviews = results.map((reviewData) => Review(
+        author: reviewData['author'] ?? '',
+        content: reviewData['content'] ?? '',
+        createdAt: reviewData['created_at'] ?? '',
+        rating: reviewData['author_details']['rating']?.toDouble(),
+      )).toList();
       logger.i('Fetched ${reviews.length} reviews for movie ID: $movieId');
       return reviews;
     } catch (e) {

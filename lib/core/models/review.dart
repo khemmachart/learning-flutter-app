@@ -1,21 +1,16 @@
-class Review {
-  final String author;
-  final String content;
-  final String createdAt;
-  final double? rating;
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-  Review({
-    required this.author,
-    required this.content,
-    required this.createdAt,
-    this.rating,
-  });
-  factory Review.fromJson(Map<String, dynamic> json) {
-    return Review(
-      author: json['author'],
-      content: json['content'],
-      createdAt: json['created_at'],
-      rating: json['author_details']['rating']?.toDouble(),
-    );
-  }
+part 'review.freezed.dart';
+part 'review.g.dart';
+
+@freezed
+class Review with _$Review {
+  const factory Review({
+    required String author,
+    required String content,
+    required String createdAt,
+    double? rating,
+  }) = _Review;
+
+  factory Review.fromJson(Map<String, dynamic> json) => _$ReviewFromJson(json);
 }

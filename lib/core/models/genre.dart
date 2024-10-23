@@ -1,13 +1,16 @@
-class Genre {
-  final int id;
-  final String name;
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-  Genre({required this.id, required this.name});
+part 'genre.freezed.dart';
+part 'genre.g.dart';
 
-  factory Genre.fromJson(Map<String, dynamic> json) {
-    return Genre(
-      id: json['id'],
-      name: json['name'],
-    );
-  }
+@freezed
+class Genre with _$Genre {
+  const Genre._();
+
+  const factory Genre({
+    required int id,
+    required String name,
+  }) = _Genre;
+
+  factory Genre.fromJson(Map<String, dynamic> json) => _$GenreFromJson(json);
 }

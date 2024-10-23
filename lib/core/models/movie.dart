@@ -1,29 +1,24 @@
-import 'package:learning_flutter_app/core/models/cast.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+import 'cast.dart';
 
-class Movie {
-  final int id;
-  final String title;
-  final double voteAverage;
-  final String overview;
-  final List<String> genres;
-  final String? posterPath;
-  final String? backdropPath;
-  final String releaseDate;
-  final int? runtime;
-  final List<Cast> cast;
+part 'movie.freezed.dart';
 
-  Movie({
-    required this.id,
-    required this.title,
-    required this.voteAverage,
-    required this.overview,
-    required this.genres,
-    required this.releaseDate,
-    required this.cast,
-    this.posterPath,
-    this.backdropPath,
-    this.runtime,
-  });
+@freezed
+class Movie with _$Movie {
+  const Movie._();
+
+  const factory Movie({
+    required int id,
+    required String title,
+    required double voteAverage,
+    required String overview,
+    required List<String> genres,
+    required String releaseDate,
+    required List<Cast> cast,
+    String? posterPath,
+    String? backdropPath,
+    int? runtime,
+  }) = _Movie;
 
   factory Movie.fromJson(Map<String, dynamic> json, Map<int, String> genreMap) {
     List<String> genreNames = (json['genre_ids'] as List<dynamic>?)
