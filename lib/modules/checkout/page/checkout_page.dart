@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_flutter_app/core/models/movie.dart';
 import 'package:learning_flutter_app/core/providers/checkout_provider.dart';
-import 'package:learning_flutter_app/modules/checkout/state/checkout_state.dart';
 import 'package:learning_flutter_app/modules/payment/payment_success/page/payment_success_page.dart';
 import 'package:learning_flutter_app/modules/checkout/widgets/date_picker.dart';
 import 'package:learning_flutter_app/modules/checkout/widgets/time_picker.dart';
