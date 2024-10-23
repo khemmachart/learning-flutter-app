@@ -10,23 +10,33 @@ final movieDisplayModeProvider = StateProvider<MovieDisplayMode>((ref) => MovieD
 enum MovieDisplayMode { popular, nowShowing }
 
 
-class MovieListPage extends ConsumerWidget {
+class MovieListPage extends ConsumerStatefulWidget {
   const MovieListPage({super.key, required this.title});
 
   final String title;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MovieListPage> createState() => _MovieListPageState();
+}
+
+class _MovieListPageState extends ConsumerState<MovieListPage> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => 
+      ref.read(movieListViewModelProvider.notifier).fetchTopRatedMovies()
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final displayMode = ref.watch(movieDisplayModeProvider);
     final moviesAsyncValue = ref.watch(movieListViewModelProvider);
     final topRatedMovies = ref.watch(movieListViewModelProvider.notifier).topRatedMovies;
 
-    // Fetch top rated movies when the page is built
-    ref.read(movieListViewModelProvider.notifier).fetchTopRatedMovies();
-
     return Scaffold(
       appBar: AppBar(
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(widget.title, style: const TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           _buildDisplayModeButton(displayMode, ref),
         ],
